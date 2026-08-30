@@ -1,0 +1,112 @@
+name: Windows GCC nightly build
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: x265-windows-nightly
+  cancel-in-progress: true
+
+env:
+  UPSTREAM: https://github.com/Multicorewareinc/x265.git
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      changed: ${{ steps.source.outputs.changed }}
+    steps:
+      - id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(git ls-remote "$UPSTREAM" refs/heads/master | awk '{print $1}')"
+          short="${sha:0:12}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "nightly-$short" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: windows-2022
+    name: Windows MinGW GCC multilib
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Multicorewareinc/x265
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 1
+      - name: Install MinGW GCC and build tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-nasm
+            make
+      - name: Build 8+10+12-bit multilib
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          export PATH="/mingw64/bin:/usr/bin:$PATH"
+          mkdir -p build/multilib
+          cd build/multilib
+          bash ../../build/msys/multilib.sh
+          ./8bit/x265.exe --version
+      - name: Package executable and DLL dependencies
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          mkdir -p package
+          cp build/multilib/8bit/x265.exe package/x265.exe
+          cp build/multilib/8bit/libx265.dll package/libx265.dll
+          (cd build/multilib/8bit && ldd ./x265.exe) \
+            | awk '/=> \/mingw64\/bin\// {print $3} /^\/mingw64\/bin\// {print $1}' \
+            | sort -u \
+            | while read -r dll; do [[ -f "$dll" ]] && cp "$dll" package/; done
+      - name: Create ZIP package
+        shell: pwsh
+        run: Compress-Archive -Path package/* -DestinationPath x265-windows-x86_64-gcc-multilib.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: x265-windows-x86_64-gcc-multilib
+          path: x265-windows-x86_64-gcc-multilib.zip
+          retention-days: 14
+
+  publish:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: x265-windows-x86_64-gcc-multilib
+          path: dist
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          set -euo pipefail
+          short="${SHA:0:12}"
+          tag="nightly-$short"
+          gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+          gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "Windows GCC nightly build: $short" \
+            --notes "Windows x86_64 MinGW GCC multilib (8/10/12-bit) built from upstream commit $SHA."
