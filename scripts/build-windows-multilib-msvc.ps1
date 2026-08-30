@@ -9,7 +9,7 @@ $OutputDir = [IO.Path]::GetFullPath($OutputDir)
 $Generator = 'Visual Studio 17 2022'
 $Nasm = 'C:\Program Files\NASM\nasm.exe'
 if (-not (Test-Path $Nasm)) { $Nasm = (Get-Command nasm -ErrorAction Stop).Source }
-$Common = @('-G', $Generator, '-A', 'x64', '-DENABLE_ASSEMBLY=ON', "-DCMAKE_ASM_NASM_COMPILER=$Nasm", '-DENABLE_SHARED=OFF', '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded')
+$Common = @('-G', $Generator, '-A', 'x64', '-DENABLE_ASSEMBLY=ON', "-DCMAKE_ASM_NASM_COMPILER=$Nasm", "-DNASM_EXECUTABLE=$Nasm", '-DENABLE_SHARED=OFF', '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded')
 
 New-Item -ItemType Directory -Force -Path "$OutputDir\12bit", "$OutputDir\10bit", "$OutputDir\8bit" | Out-Null
 
