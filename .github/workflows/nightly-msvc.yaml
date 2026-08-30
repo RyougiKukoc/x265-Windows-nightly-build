@@ -45,13 +45,13 @@ jobs:
     runs-on: windows-2022
     name: Windows MSVC multilib
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: Multicorewareinc/x265
           ref: ${{ needs.prepare.outputs.sha }}
           fetch-depth: 0
           path: x265
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: nightly-tools
       - name: Install NASM
@@ -60,7 +60,7 @@ jobs:
       - name: Build 8+10+12-bit multilib
         shell: pwsh
         run: .\nightly-tools\scripts\build-windows-multilib-msvc.ps1 -SourceDir .\x265 -OutputDir .\x265\build\multilib
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: x265-windows-x86_64-msvc-multilib
           path: x265/x265-windows-x86_64-msvc-multilib.zip
@@ -71,7 +71,7 @@ jobs:
     if: needs.prepare.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: x265-windows-x86_64-msvc-multilib
           path: dist
