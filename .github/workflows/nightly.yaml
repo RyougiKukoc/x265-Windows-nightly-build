@@ -74,8 +74,9 @@ jobs:
           cd build/multilib
           bash ../../build/msys/multilib.sh
           ./8bit/x265.exe --version
-          if objdump -p ./8bit/x265.exe | grep -Eiq 'libstdc\+\+|libgcc|libwinpthread'; then
-            echo 'GCC runtime DLL dependency remains'; exit 1
+          runtime_deps="$(objdump -p ./8bit/x265.exe | sed -n 's/.*DLL Name: \(libstdc++[^ ]*\|libgcc[^ ]*\|libwinpthread[^ ]*\).*/\1/p')"
+          if [[ -n "$runtime_deps" ]]; then
+            echo "GCC runtime DLL dependencies remain:"; echo "$runtime_deps"; exit 1
           fi
       - name: Package executable and DLL dependencies
         shell: msys2 {0}
