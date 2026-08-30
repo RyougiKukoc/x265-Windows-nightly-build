@@ -1,4 +1,4 @@
-name: Windows GCC nightly build
+name: MSVC nightly build
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: x265-windows-nightly
+  group: x265-windows-msvc-nightly
   cancel-in-progress: true
 
 env:
@@ -43,37 +43,24 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.changed == 'true'
     runs-on: windows-2022
-    name: Windows MinGW GCC multilib
+    name: Windows MSVC multilib
     steps:
       - uses: actions/checkout@v4
         with:
           repository: Multicorewareinc/x265
           ref: ${{ needs.prepare.outputs.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           path: x265
       - uses: actions/checkout@v4
         with:
           path: nightly-tools
-      - name: Install MinGW GCC and build tools
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-nasm
-            mingw-w64-x86_64-ninja
-            zip
       - name: Build 8+10+12-bit multilib
-        shell: msys2 {0}
-        run: |
-          set -euo pipefail
-          bash nightly-tools/scripts/build-windows-multilib.sh "$PWD/x265" "$PWD/x265/build/multilib"
+        shell: pwsh
+        run: .\nightly-tools\scripts\build-windows-multilib-msvc.ps1 -SourceDir .\x265 -OutputDir .\x265\build\multilib
       - uses: actions/upload-artifact@v4
         with:
-          name: x265-windows-x86_64-gcc-multilib
-          path: x265/x265-windows-x86_64-gcc-multilib.zip
+          name: x265-windows-x86_64-msvc-multilib
+          path: x265/x265-windows-x86_64-msvc-multilib.zip
           retention-days: 14
 
   publish:
@@ -83,7 +70,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: x265-windows-x86_64-gcc-multilib
+          name: x265-windows-x86_64-msvc-multilib
           path: dist
       - name: Publish Release
         env:
@@ -95,5 +82,5 @@ jobs:
           tag="nightly-$short"
           gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
           gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" \
-            --title "Windows GCC nightly build: $short" \
-            --notes "Windows x86_64 MinGW GCC multilib (8/10/12-bit) built from upstream commit [$SHA](https://github.com/Multicorewareinc/x265/commit/$SHA)."
+            --title "MSVC nightly build: $short" \
+            --notes "Windows x86_64 MSVC multilib (8/10/12-bit) built from upstream commit [$SHA](https://github.com/Multicorewareinc/x265/commit/$SHA)."
