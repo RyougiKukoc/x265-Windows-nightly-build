@@ -79,7 +79,6 @@ jobs:
           set -euo pipefail
           mkdir -p package
           cp build/multilib/8bit/x265.exe package/x265.exe
-          cp build/multilib/8bit/libx265.dll package/libx265.dll
           (cd build/multilib/8bit && ldd ./x265.exe) \
             | awk '/=> \/mingw64\/bin\// {print $3} /^\/mingw64\/bin\// {print $1}' \
             | sort -u \
