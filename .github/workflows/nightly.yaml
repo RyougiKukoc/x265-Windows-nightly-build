@@ -74,11 +74,11 @@ jobs:
           mkdir -p build/multilib/{12bit,10bit,8bit}
           cmake -S source -B build/multilib/12bit "${common[@]}" -DHIGH_BIT_DEPTH=ON -DMAIN12=ON -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
           cmake --build build/multilib/12bit --parallel
-          cp build/multilib/12bit/libx265.a build/multilib/libx265_main12.a
+          cp build/multilib/12bit/libx265.a build/multilib/8bit/libx265_main12.a
           cmake -S source -B build/multilib/10bit "${common[@]}" -DHIGH_BIT_DEPTH=ON -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
           cmake --build build/multilib/10bit --parallel
-          cp build/multilib/10bit/libx265.a build/multilib/libx265_main10.a
-          cmake -S source -B build/multilib/8bit "${common[@]}" -DLINKED_10BIT=ON -DLINKED_12BIT=ON -DEXTRA_LIB="$PWD/build/multilib/libx265_main10.a;$PWD/build/multilib/libx265_main12.a" -DEXTRA_LINK_FLAGS="-L$PWD/build/multilib" -DENABLE_SHARED=OFF -DENABLE_CLI=ON
+          cp build/multilib/10bit/libx265.a build/multilib/8bit/libx265_main10.a
+          cmake -S source -B build/multilib/8bit "${common[@]}" -DLINKED_10BIT=ON -DLINKED_12BIT=ON -DEXTRA_LIB="x265_main10.a;x265_main12.a" -DEXTRA_LINK_FLAGS=-L. -DENABLE_SHARED=OFF -DENABLE_CLI=ON
           cmake --build build/multilib/8bit --parallel
           ./build/multilib/8bit/x265.exe --version
           runtime_deps="$(objdump -p ./build/multilib/8bit/x265.exe | sed -n 's/.*DLL Name: \(libstdc++[^ ]*\|libgcc[^ ]*\|libwinpthread[^ ]*\).*/\1/p')"
