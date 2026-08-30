@@ -96,4 +96,4 @@ jobs:
           gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
           gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" \
             --title "Windows GCC nightly build: $short" \
-            --notes "Windows x86_64 MinGW GCC multilib (8/10/12-bit) built from upstream commit $SHA."
+            --notes "Windows x86_64 MinGW GCC multilib (8/10/12-bit) built from upstream commit [$SHA](https://github.com/Multicorewareinc/x265/commit/$SHA)."
