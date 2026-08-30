@@ -50,6 +50,10 @@ jobs:
           repository: Multicorewareinc/x265
           ref: ${{ needs.prepare.outputs.sha }}
           fetch-depth: 1
+          path: x265
+      - uses: actions/checkout@v4
+        with:
+          path: nightly-tools
       - name: Install MinGW GCC and build tools
         uses: msys2/setup-msys2@v2
         with:
@@ -60,46 +64,16 @@ jobs:
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-nasm
             mingw-w64-x86_64-ninja
-            make
+            zip
       - name: Build 8+10+12-bit multilib
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          export PATH="/mingw64/bin:/usr/bin:$PATH"
-          export LDFLAGS="-static-libgcc -static-libstdc++ -static"
-          # MinGW windres does not accept the upstream Visual Studio resource
-          # syntax. Use a valid minimal resource in this temporary checkout.
-          printf '%s\n' '1 VERSIONINFO BEGIN END' > source/x265.rc.in
-          common=(-G Ninja -DENABLE_ASSEMBLY=ON -DCMAKE_CXX_FLAGS="-static-libstdc++ -static-libgcc" -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread")
-          mkdir -p build/multilib/{12bit,10bit,8bit}
-          cmake -S source -B build/multilib/12bit "${common[@]}" -DHIGH_BIT_DEPTH=ON -DMAIN12=ON -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
-          cmake --build build/multilib/12bit --parallel
-          cp build/multilib/12bit/libx265.a build/multilib/8bit/libx265_main12.a
-          cmake -S source -B build/multilib/10bit "${common[@]}" -DHIGH_BIT_DEPTH=ON -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
-          cmake --build build/multilib/10bit --parallel
-          cp build/multilib/10bit/libx265.a build/multilib/8bit/libx265_main10.a
-          cmake -S source -B build/multilib/8bit "${common[@]}" -DLINKED_10BIT=ON -DLINKED_12BIT=ON -DEXTRA_LIB="x265_main10.a;x265_main12.a" -DEXTRA_LINK_FLAGS=-L. -DENABLE_SHARED=OFF -DENABLE_CLI=ON
-          cmake --build build/multilib/8bit --parallel
-          ./build/multilib/8bit/x265.exe --version
-          runtime_deps="$(objdump -p ./build/multilib/8bit/x265.exe | sed -n 's/.*DLL Name: \(libstdc++[^ ]*\|libgcc[^ ]*\|libwinpthread[^ ]*\).*/\1/p')"
-          if [[ -n "$runtime_deps" ]]; then echo "$runtime_deps"; exit 1; fi
-      - name: Package executable and DLL dependencies
-        shell: msys2 {0}
-        run: |
-          set -euo pipefail
-          mkdir -p package
-          cp build/multilib/8bit/x265.exe package/x265.exe
-          (cd build/multilib/8bit && ldd ./x265.exe) \
-            | awk '/=> \/mingw64\/bin\// {print $3} /^\/mingw64\/bin\// {print $1}' \
-            | sort -u \
-            | while read -r dll; do [[ -f "$dll" ]] && cp "$dll" package/; done
-      - name: Create ZIP package
-        shell: pwsh
-        run: Compress-Archive -Path package/* -DestinationPath x265-windows-x86_64-gcc-multilib.zip -Force
+          bash nightly-tools/scripts/build-windows-multilib.sh "$PWD/x265" "$PWD/x265/build/multilib"
       - uses: actions/upload-artifact@v4
         with:
           name: x265-windows-x86_64-gcc-multilib
-          path: x265-windows-x86_64-gcc-multilib.zip
+          path: x265/x265-windows-x86_64-gcc-multilib.zip
           retention-days: 14
 
   publish:
