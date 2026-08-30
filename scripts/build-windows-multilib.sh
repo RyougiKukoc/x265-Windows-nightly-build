@@ -11,7 +11,8 @@ printf '%s\n' '1 VERSIONINFO BEGIN END' > source/x265.rc.in
 
 common=(-G Ninja -DENABLE_ASSEMBLY=ON
   -DCMAKE_CXX_FLAGS="-static-libstdc++ -static-libgcc"
-  -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread")
+  -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread"
+  '-DCMAKE_CXX_STANDARD_LIBRARIES=-Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic')
 mkdir -p "$out_dir"/{12bit,10bit,8bit}
 
 cmake -S source -B "$out_dir/12bit" "${common[@]}" -DHIGH_BIT_DEPTH=ON -DMAIN12=ON -DEXPORT_C_API=OFF -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
