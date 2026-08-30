@@ -65,6 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="/mingw64/bin:/usr/bin:$PATH"
+          export LDFLAGS="-static-libgcc -static-libstdc++ -static"
           # MinGW windres does not accept the upstream Visual Studio resource
           # syntax. Use a valid minimal VERSIONINFO resource in this checkout.
           printf '%s\n' '1 VERSIONINFO BEGIN END' > source/x265.rc.in
@@ -73,6 +74,9 @@ jobs:
           cd build/multilib
           bash ../../build/msys/multilib.sh
           ./8bit/x265.exe --version
+          if objdump -p ./8bit/x265.exe | grep -Eiq 'libstdc\+\+|libgcc|libwinpthread'; then
+            echo 'GCC runtime DLL dependency remains'; exit 1
+          fi
       - name: Package executable and DLL dependencies
         shell: msys2 {0}
         run: |
