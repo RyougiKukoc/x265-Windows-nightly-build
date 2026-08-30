@@ -65,9 +65,9 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="/mingw64/bin:/usr/bin:$PATH"
-          # The upstream helper enables shared output for the final target;
-          # disable it in this temporary checkout to avoid windres/shared-DLL
-          # failures and produce the CLI executable we distribute.
+          # MinGW windres does not accept the upstream Visual Studio resource
+          # syntax. Use a valid minimal VERSIONINFO resource in this checkout.
+          printf '%s\n' '1 VERSIONINFO BEGIN END' > source/x265.rc.in
           sed -i 's@cmake -G "MSYS Makefiles" ../../../source -DEXTRA_LIB@cmake -G "MSYS Makefiles" ../../../source -DENABLE_SHARED=OFF -DEXTRA_LIB@' build/msys/multilib.sh
           mkdir -p build/multilib
           cd build/multilib
