@@ -1,15 +1,13 @@
-name: Windows GCC nightly build (archived)
+name: Windows GCC build verification
 
 on:
-  schedule:
-    - cron: '0 4 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: x265-windows-nightly
+  group: x265-windows-gcc-verification
   cancel-in-progress: true
 
 env:
@@ -20,28 +18,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.source.outputs.sha }}
-      changed: ${{ steps.source.outputs.changed }}
     steps:
       - id: source
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           sha="$(git ls-remote "$UPSTREAM" refs/heads/master | awk '{print $1}')"
-          short="${sha:0:12}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          elif gh release view "nightly-$short" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
 
   build:
     needs: prepare
-    if: needs.prepare.outputs.changed == 'true'
     runs-on: windows-2022
     name: Windows MinGW GCC multilib
     steps:
@@ -75,25 +61,3 @@ jobs:
           name: x265-windows-x86_64-gcc-multilib
           path: x265/x265-windows-x86_64-gcc-multilib.zip
           retention-days: 14
-
-  publish:
-    needs: [prepare, build]
-    if: needs.prepare.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: x265-windows-x86_64-gcc-multilib
-          path: dist
-      - name: Publish Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ needs.prepare.outputs.sha }}
-        run: |
-          set -euo pipefail
-          short="${SHA:0:12}"
-          tag="nightly-$short"
-          gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
-          gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" \
-            --title "Windows GCC nightly build: $short" \
-            --notes "Windows x86_64 MinGW GCC multilib (8/10/12-bit) built from upstream commit [$SHA](https://github.com/Multicorewareinc/x265/commit/$SHA)."

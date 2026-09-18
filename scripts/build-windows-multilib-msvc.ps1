@@ -42,6 +42,7 @@ if ($Version -notmatch '8bit\+10bit\+12bit') { throw "The executable is not a mu
 $PackageDir = "$OutputDir\package"
 New-Item -ItemType Directory -Force -Path $PackageDir | Out-Null
 Copy-Item $Exe "$PackageDir\x265.exe" -Force
+Copy-Item "$SourceDir\COPYING" "$PackageDir\COPYING" -Force
 $Zip = "$SourceDir\x265-windows-x86_64-msvc-multilib.zip"
 Remove-Item $Zip -Force -ErrorAction SilentlyContinue
 Compress-Archive -Path "$PackageDir\*" -DestinationPath $Zip -Force
