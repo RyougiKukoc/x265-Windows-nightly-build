@@ -23,14 +23,14 @@ publish GitHub Release assets.
 - All release builds target x86_64 with Visual Studio 2022 and NASM.
 - The 8-bit CLI links the separately built 10- and 12-bit static libraries to
   provide one multilib executable.
-- `ENABLE_SHARED=OFF` keeps the release focused on the command-line encoder.
+- `ENABLE_SHARED=OFF`.
 
 ## Local validation
 
 Install the Visual Studio 2022 C++ workload, CMake, and NASM. Clone the desired
 x265 source checkout, then run:
 
-```powershell
+```
 .\scripts\build-windows-multilib-msvc.ps1 -SourceDir ..\x265 -OutputDir .\dist\multilib
 ```
 
